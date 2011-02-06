@@ -1,5 +1,10 @@
 import cgi
 import os
+import sys
+import datetime
+#sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+#from twitter.api import Twitter
+#from twitter.oauth import OAuth
 
 from google.appengine.ext.webapp import template
 
@@ -18,7 +23,9 @@ class MainPage(webapp.RequestHandler):
         greetings_query = Greeting.all().order('-date')
         greetings = greetings_query.fetch(10)
 
-        if users.get_current_user():
+        user = users.get_current_user()
+
+        if user:
             url = users.create_logout_url(self.request.uri)
             url_linktext = 'Logout'
         else:
