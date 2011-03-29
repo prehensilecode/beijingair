@@ -4,8 +4,9 @@ import sys
 import datetime
 import json
 #sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-#from twitter.api import Twitter
-#from twitter.oauth import OAuth
+sys.path.insert(0, 'twitter.zip')
+from twitter.api import Twitter
+from twitter.oauth import OAuth
 
 from google.appengine.ext.webapp import template
 

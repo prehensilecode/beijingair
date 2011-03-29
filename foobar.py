@@ -51,6 +51,11 @@ def crunch(data):
     
     return (data_max, data_min, data_mean)
 
+def html_head():
+    print '<html><head><title>Beijing Air Stats</title></head><body>'
+
+def html_tail():
+    print '</body></html>'
 
 def main():
     t = twitter.api.Twitter(auth=twitter.oauth.OAuth('', '', '', ''))
@@ -88,16 +93,20 @@ def main():
     (pm_max, pm_min, pm_mean) = crunch(pm)
     (o3_max, o3_min, o3_mean) = crunch(o3)
 
+    print '<pre>'
     print 'Particulate matter concentration (ppm):'
     print '    Mean: ', pm_mean
     print '    Max:  ', pm_max
     print '    Min:  ', pm_min
+    print '</pre>'
 
     print ''
+    print '<pre>'
     print 'Ozone concentration (ppm):'
     print '    Mean: ', o3_mean
     print '    Max:  ', o3_max
     print '    Min:  ', o3_min
+    print '</pre>'
 
 
     #for x in pm:
