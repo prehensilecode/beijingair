@@ -7,6 +7,7 @@ import os
 import datetime
 
 #import simplejson as json
+sys.path.insert(0, '.')
 import json
 
 #from twitter.api import Twitter
@@ -93,6 +94,8 @@ def main():
     (pm_max, pm_min, pm_mean) = crunch(pm)
     (o3_max, o3_min, o3_mean) = crunch(o3)
 
+    html_head()
+
     print '<pre>'
     print 'Particulate matter concentration (ppm):'
     print '    Mean: ', pm_mean
@@ -107,6 +110,8 @@ def main():
     print '    Max:  ', o3_max
     print '    Min:  ', o3_min
     print '</pre>'
+
+    html_tail()
 
 
     #for x in pm:
