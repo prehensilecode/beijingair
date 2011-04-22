@@ -65,9 +65,18 @@ def main():
     
     pm = []
     o3 = []
+    dt = []
     j = []
+    day = ''
+    month = ''
+    year = ''
+    hr = ''
+    min = ''
     for s in cur:
-        (date, time) = s['text'].split(';')[0:2]
+        (d, t) = s['text'].split(';')[0:2]
+        (month, day, year) = d.split('-')
+        (hr, min) = t.split(':')
+        dt.append(datetime.datetime(int(year), int(month), int(day), int(hr), int(min)))
         data = s['text'].split('//')
         pmraw = data[0].split(';')[3:]
         o3raw = data[1].split(';')[1:]
@@ -110,6 +119,10 @@ def main():
     print '    Max:  ', o3_max
     print '    Min:  ', o3_min
     print '</pre>'
+
+    print '<pre>No. of data points: pm - ', len(pm), '; o3 - ', len(o3), '</pre>'
+    # stream is most recent first
+    print '<pre>From: ', dt[-1], 'to', dt[0], '</pre>'
 
     html_tail()
 
