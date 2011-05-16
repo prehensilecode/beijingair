@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.5
 from google.appengine.ext.webapp import util
+from google.appengine.ext import db
 
 import sys
 import os
@@ -15,6 +16,19 @@ import json
 #import twitter
 sys.path.insert(0, 'twitter.zip')
 import twitter
+
+def datastore_create():
+    #CREATE the datastore
+    class tReading(db.Model):
+        ckID = db.IntegerProperty(required=True)
+        cFeedType = db.StringProperty(required=True,choices=set(["PM2","Ozone","PM2Avg","OzoneHigh"]))
+        cDateTime = db.DateTimeProperty()
+        cPM2p5Avg = db.FloatProperty()
+        cOzoneHigh= db.IntegerProperty()
+        cPM2p5_AQI_Quan = db.IntegerProperty()
+        cPM2p5_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
+        cOZONE_AQI_Quan = db.IntegerProperty()
+        cOZONE_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
 
 
 def aqi_definition(aqi):
@@ -103,7 +117,12 @@ def main():
     (pm_max, pm_min, pm_mean) = crunch(pm)
     (o3_max, o3_min, o3_mean) = crunch(o3)
 
+
     html_head()
+    
+
+
+        
 
     print '<pre>'
     print 'Particulate matter concentration (ppm):'
