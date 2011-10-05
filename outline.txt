@@ -1,0 +1,18 @@
+This is a text file.
+
+Create code for data structure
+Import data & Test
+
+
+Create graphics structure
+
+Import Graphics
+
+Set to display
+
+Extensions:
+	Generalization of data input
+	Analytics
+		Prediction of Pollutants with data
+		Integration of other data
+	
