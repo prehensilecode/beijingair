@@ -54,6 +54,9 @@ def html_head():
     print '<html><head><title>Beijing Air Stats</title></head><body>'
 
 def html_tail():
+    print '<p>&nbsp;</p>'
+    print '<h4>About</h4>'
+    print '<p>We read <a href="https://twitter.com/#!/beijingair">@beijingair</a> and crunch the data.</p>'
     print '</body></html>'
 
 def main():
