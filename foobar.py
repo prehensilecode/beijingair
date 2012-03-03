@@ -150,17 +150,17 @@ def main():
 
     print '<pre>'
     print 'Particulate matter (PM2.5) concentration (ppm):'
-    print '    Mean: ', pm_mean
-    print '    Max:  ', pm_max
-    print '    Min:  ', pm_min
+    print '    Mean: %.2f' % (pm_mean)
+    print '    Max:  %.2f' % (pm_max)
+    print '    Min:  %.2f' % (pm_min)
     print '</pre>'
 
     print ''
     print '<pre>'
     print 'Ozone concentration (ppm):'
-    print '    Mean: ', o3_mean
-    print '    Max:  ', o3_max
-    print '    Min:  ', o3_min
+    print '    Mean: %.2f' % (o3_mean)
+    print '    Max:  %.2f' % (o3_max)
+    print '    Min:  %.2f' % (o3_min)
     print '</pre>'
 
     print '<pre>No. of data points: pm - ', len(pm), '; o3 - ', len(o3), '</pre>'
