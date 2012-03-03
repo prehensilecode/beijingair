@@ -52,6 +52,7 @@ def crunch(data):
 
 def html_head():
     print '<html><head><title>Beijing Air Stats</title></head><body>'
+    print '<h4>@BeijingAir summary</h4>'
 
 def html_tail():
     print '<p>&nbsp;</p>'
