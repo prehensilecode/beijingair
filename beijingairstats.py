@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 import json
+import webapp2
 #sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, 'twitter.zip')
 from twitter.api import Twitter
@@ -20,7 +21,7 @@ class Greeting(db.Model):
     content = db.StringProperty(multiline=True)
     date = db.DateTimeProperty(auto_now_add=True)
 
-class MainPage(webapp.RequestHandler):
+class MainPage(webapp2.RequestHandler):
     def get(self):
         greetings_query = Greeting.all().order('-date')
         greetings = greetings_query.fetch(10)
@@ -43,7 +44,7 @@ class MainPage(webapp.RequestHandler):
         path = os.path.join(os.path.dirname(__file__), 'index.html')
         self.response.out.write(template.render(path, template_values))
 
-class Guestbook(webapp.RequestHandler):
+class Guestbook(webapp2.RequestHandler):
     def post(self):
         greeting = Greeting()
 
@@ -54,14 +55,8 @@ class Guestbook(webapp.RequestHandler):
         greeting.put()
         self.redirect('/')
 
-application = webapp.WSGIApplication(
-                                     [('/', MainPage),
-                                      ('/sign', Guestbook)],
-                                     debug=True)
-
-def main():
-    run_wsgi_app(application)
-
-if __name__ == "__main__":
-    main()
+app = webapp2.WSGIApplication(
+                              [('/', MainPage),
+                               ('/sign', Guestbook)],
+                              debug=True)
 
