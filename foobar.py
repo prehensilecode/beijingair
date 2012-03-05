@@ -14,6 +14,18 @@ from google.appengine.ext.webapp import util
 import twitter
 
 debug_p = False
+def datastore_create():
+    #CREATE the datastore
+    class tReading(db.Model):
+        ckID = db.IntegerProperty(required=True)
+        cFeedType = db.StringProperty(required=True,choices=set(["PM2","Ozone","PM2Avg","OzoneHigh"]))
+        cDateTime = db.DateTimeProperty()
+        cPM2p5Avg = db.FloatProperty()
+        cOzoneHigh= db.IntegerProperty()
+        cPM2p5_AQI_Quan = db.IntegerProperty()
+        cPM2p5_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
+        cOZONE_AQI_Quan = db.IntegerProperty()
+        cOZONE_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
 
 def aqi_definition(aqi):
     """Given an integer AQI, return the interpretation"""
