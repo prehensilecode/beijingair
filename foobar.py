@@ -51,8 +51,47 @@ def crunch(data):
     return (data_max, data_min, data_mean)
 
 def html_head():
-    print '<html><head><title>Beijing Air Stats</title></head><body>'
+    print '<html><head><title>Beijing Air Stats</title></head>'
+    print '    <!--Load the AJAX API-->'
+    print '    <script type="text/javascript" src="https://www.google.com/jsapi"></script>'
+    print '    <script type="text/javascript">'
+    
+    print '      // Load the Visualization API and the piechart package.'
+    print """      google.load('visualization', '1.0', {'packages':['corechart']});"""
+      
+    print '      // Set a callback to run when the Google Visualization API is loaded.'
+    print '      google.setOnLoadCallback(drawChart);'
+    
+def html_data_table(pm, o3):
+    # populate data table
+    print '    </script'
+    pass
+
+def html_body(pm, o3, dt):
+    print '<body>'
     print '<h4><a href="https://twitter.com/#!/BeijingAir">@BeijingAir</a> summary</h4>'
+
+    (pm_max, pm_min, pm_mean) = crunch(pm)
+    (o3_max, o3_min, o3_mean) = crunch(o3)
+
+    print '<pre>'
+    print 'Particulate matter (PM2.5) concentration (ppm):'
+    print '    Mean: %.2f' % (pm_mean)
+    print '    Max:  %.2f' % (pm_max)
+    print '    Min:  %.2f' % (pm_min)
+    print '</pre>'
+
+    print ''
+    print '<pre>'
+    print 'Ozone concentration (ppm):'
+    print '    Mean: %.2f' % (o3_mean)
+    print '    Max:  %.2f' % (o3_max)
+    print '    Min:  %.2f' % (o3_min)
+    print '</pre>'
+
+    print '<pre>No. of data points: pm - ', len(pm), '; o3 - ', len(o3), '</pre>'
+    # stream is most recent first
+    print '<pre>From: ', dt[-1], 'to', dt[0], '</pre>'
 
 def html_tail():
     print '</body></html>'
@@ -143,29 +182,10 @@ def main():
     
             #j.append(json.write(s)) 
     
-    (pm_max, pm_min, pm_mean) = crunch(pm)
-    (o3_max, o3_min, o3_mean) = crunch(o3)
 
     html_head()
-
-    print '<pre>'
-    print 'Particulate matter (PM2.5) concentration (ppm):'
-    print '    Mean: %.2f' % (pm_mean)
-    print '    Max:  %.2f' % (pm_max)
-    print '    Min:  %.2f' % (pm_min)
-    print '</pre>'
-
-    print ''
-    print '<pre>'
-    print 'Ozone concentration (ppm):'
-    print '    Mean: %.2f' % (o3_mean)
-    print '    Max:  %.2f' % (o3_max)
-    print '    Min:  %.2f' % (o3_min)
-    print '</pre>'
-
-    print '<pre>No. of data points: pm - ', len(pm), '; o3 - ', len(o3), '</pre>'
-    # stream is most recent first
-    print '<pre>From: ', dt[-1], 'to', dt[0], '</pre>'
+    html_data_table(pm, o3)
+    html_body(pm, o3, dt)
 
     html_tail()
 
