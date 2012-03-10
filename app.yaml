@@ -9,5 +9,5 @@ handlers:
   static_dir: stylesheets
 
 - url: /.*
-  script: foobar.py
+  script: foobar.app
 
