@@ -7,7 +7,6 @@ import datetime
 #import json
 
 from google.appengine.ext import db
-from google.appengine.api import users
 from google.appengine.ext.webapp import util
 
 # modules to be included with this app
@@ -27,6 +26,12 @@ debug_p = False
 #        cPM2p5_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
 #        cOZONE_AQI_Quan = db.IntegerProperty()
 #        cOZONE_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
+
+class Reading(db.Model):
+    """Models an individual air quality reading of PM2.5 and O3"""
+    dt = db.DateTimeProperty(auto_now_add=False)
+    pm = db.FloatProperty()
+    o3 = db.FloatProperty()
 
 def aqi_definition(aqi):
     """Given an integer AQI, return the interpretation"""
@@ -63,82 +68,91 @@ def crunch(data):
     
     return (data_max, data_min, data_mean)
 
+def dummy_head():
+    s = """<html><head><title>Beijing Air Stats</title></head>"""
+    return s
+
+def dummy_body():
+    s = """
+        <body>
+            <h1>hello, world</h1>
+        </body>
+        </html>"""
+    return s
+
 def html_head():
-    print '<html><head><title>Beijing Air Stats</title></head>'
-    print '    <!--Load the AJAX API-->'
-    print '    <script type="text/javascript" src="https://www.google.com/jsapi"></script>'
-    print '    <script type="text/javascript">'
+    s = """<html><head><title>Beijing Air Stats</title></head>
+        <!--Load the AJAX API-->
+        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+        <script type="text/javascript">
+            // Load the Visualization API and the piechart package.
+            google.load('visualization', '1.0', {'packages':['corechart']});
+            // Set a callback to run when the Google Visualization API is loaded.
+            google.setOnLoadCallback(drawChart);
+        """
+    return s
     
-    print '      // Load the Visualization API and the piechart package.'
-    print """      google.load('visualization', '1.0', {'packages':['corechart']});"""
-      
-    print '      // Set a callback to run when the Google Visualization API is loaded.'
-    print '      google.setOnLoadCallback(drawChart);'
-    
-def html_data_table(pm, o3, dt):
+def html_data_table(dt, pm, o3):
     # populate data table
-    print "      function drawChart() {"
-    print "          var pm_data = new google.visualization.DataTable();"
-    print "          var o3_data = new google.visualization.DataTable();"
-    print "          pm_data.addColumn('datetime', 'Date/Time (local)');"
-    print "          pm_data.addColumn('number', 'PM2.5 (ppm)');"
-    print "          pm_data.addRows(["
+    datatable_strings = ["""    function drawChart() {
+                     var pm_data = new google.visualization.DataTable();
+                     var o3_data = new google.visualization.DataTable();
+                     pm_data.addColumn('datetime', 'Date/Time (local)');
+                     pm_data.addColumn('number', 'PM2.5 (ppm)');
+                     pm_data.addRows(["""]
     for i in range(len(pm)):
-        print "              [new Date(%d, %d, %d, %d, %d, %d), %f]," % (dt[i].year, dt[i].month, dt[i].day, dt[i].hour, dt[i].minute, dt[i].second, pm[i]['concentration'])
-    print "          ]);"
-    print "          o3_data.addColumn('datetime', 'Date/Time (local)');"
-    print "          o3_data.addColumn('number', 'O3 (ppm)');"
-    print "          o3_data.addRows(["
+        datatable_strings.append("              [new Date(%d, %d, %d, %d, %d, %d), %f]," % (dt[i].year, dt[i].month, dt[i].day, dt[i].hour, dt[i].minute, dt[i].second, pm[i]['concentration']))
+    datatable_strings.append("""          ]);
+              o3_data.addColumn('datetime', 'Date/Time (local)');
+              o3_data.addColumn('number', 'O3 (ppm)');
+              o3_data.addRows([""")
     for i in range(len(pm)):
-        print "              [new Date(%d, %d, %d, %d, %d, %d), %f]," % (dt[i].year, dt[i].month, dt[i].day, dt[i].hour, dt[i].minute, dt[i].second, o3[i]['concentration'])
-    print "          ]);"
+        datatable_strings.append("              [new Date(%d, %d, %d, %d, %d, %d), %f]," % (dt[i].year, dt[i].month, dt[i].day, dt[i].hour, dt[i].minute, dt[i].second, o3[i]['concentration']))
+    datatable_strings.append("""          ]);
+              var pm_options = { title: 'Beijing Air Quality: PM2.5 (ppm)', vAxis: {logScale: false}};
+              var o3_options = { title: 'Beijing Air Quality: O3 (ppm)', vAxis: {logScale: false}};
+              var pm_chart = new google.visualization.LineChart(document.getElementById('pm_chart_div'));
+              var o3_chart = new google.visualization.LineChart(document.getElementById('o3_chart_div'));
+              pm_chart.draw(pm_data, pm_options);
+              o3_chart.draw(o3_data, o3_options);
+          }
+        </script>""")
+    return ''.join(datatable_strings)
 
-    print "          var options = { title: 'Beijing Air Quality', vAxis: {logScale: true}};"
-    print "          var pm_chart = new google.visualization.LineChart(document.getElementById('pm_chart_div'));"
-    print "          var o3_chart = new google.visualization.LineChart(document.getElementById('o3_chart_div'));"
-    print "          pm_chart.draw(pm_data, options);"
-    print "          o3_chart.draw(o3_data, options);"
-    print "      }"
-    print "    </script>"
-
-def html_body(pm, o3, dt):
-    print '<body>'
-    print '<h2><a href="https://twitter.com/#!/BeijingAir">@BeijingAir</a> Summary</h2>'
-
+def html_body(dt, pm, o3):
     (pm_max, pm_min, pm_mean) = crunch(pm)
     (o3_max, o3_min, o3_mean) = crunch(o3)
 
-    print '<div id="pm_chart_div" style="width: 900px; height: 500px;"></div>'
-    print '<p>&nbsp;</p>'
-    print '<div id="o3_chart_div" style="width: 900px; height: 500px;"></div>'
+    body_strings =  ["""<body>
+    <h2><a href="https://twitter.com/#!/BeijingAir">@BeijingAir</a> Summary</h2>
+    <div id="pm_chart_div" style="width: 900px; height: 500px;"></div>
+    <p>&nbsp;</p>
+    <div id="o3_chart_div" style="width: 900px; height: 500px;"></div>
+    <h4>Summary statistics</h4>
+    <pre>
+    Particulate matter (PM2.5) concentration (ppm):\n"""]
 
-    print '<h4>Summary statistics</h4>'
-    print '<pre>'
-    print 'Particulate matter (PM2.5) concentration (ppm):'
-    print '    Mean: %.2f' % (pm_mean)
-    print '    Max:  %.2f' % (pm_max)
-    print '    Min:  %.2f' % (pm_min)
-    print '</pre>'
+    body_strings.append('         Mean: %.2f\n' % (pm_mean)) 
+    body_strings.append('         Max:  %.2f\n' % (pm_max))
+    body_strings.append('         Min:  %.2f\n\n' % (pm_min))
+    body_strings.append("""    Ozone concentration (ppm):\n""")
 
-    print ''
-    print '<pre>'
-    print 'Ozone concentration (ppm):'
-    print '    Mean: %.2f' % (o3_mean)
-    print '    Max:  %.2f' % (o3_max)
-    print '    Min:  %.2f' % (o3_min)
-    print '</pre>'
-
-    print '<pre>No. of data points: pm - ', len(pm), '; o3 - ', len(o3), '</pre>'
+    body_strings.append('         Mean: %.2f\n' % (o3_mean))
+    body_strings.append('         Max:  %.2f\n' % (o3_max))
+    body_strings.append('         Min:  %.2f\n\n' % (o3_min))
+    body_strings.append('    No. of data points: pm - %d, o3 - %d' % (len(pm), len(o3)))
     # stream is most recent first
-    print '<pre>From: ', dt[-1], 'to', dt[0], '</pre>'
+    body_strings.append('    From: %s to %s</pre>' % (dt[-1], dt[0]))
 
     #print '<pre>dt = ', dt
     #print 'pm = ', pm
     #print 'o3 = ', o3
     #print '</pre>'
 
+    return ''.join(body_strings)
+
 def html_tail():
-    print '</body></html>'
+    return '</body></html>'
 
 def main():
     global debug_p
@@ -227,11 +241,11 @@ def main():
             #j.append(json.write(s)) 
     
 
-    html_head()
-    html_data_table(pm, o3, dt)
-    html_body(pm, o3, dt)
+    #html_head()
+    #html_data_table(dt, pm, o3)
+    #html_body(dt, pm, o3)
 
-    html_tail()
+    #html_tail()
 
 
     #for x in pm:
@@ -240,10 +254,15 @@ def main():
     #for d in j:
     #    print '\n'.join([d.rstrip() for l in d.splitlines()])
 
+    return (dt, pm, o3)
+
 class MainPage(webapp2.RequestHandler):
     def get(self):
-        self.response.headers['Content-Type'] = 'text/plain'
-        self.response.out.write('Hello, webapp World!')
+        [dt, pm, o3] = main()
+        self.response.out.write(html_head())
+        self.response.out.write(html_data_table(dt, pm, o3))
+        self.response.out.write(html_body(dt, pm, o3))
+        self.response.out.write(html_tail())
 
 app = webapp2.WSGIApplication([('/', MainPage)], 
                               debug=True)
