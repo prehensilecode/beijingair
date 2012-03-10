@@ -14,18 +14,19 @@ from google.appengine.ext.webapp import util
 import twitter
 
 debug_p = False
-def datastore_create():
-    #CREATE the datastore
-    class tReading(db.Model):
-        ckID = db.IntegerProperty(required=True)
-        cFeedType = db.StringProperty(required=True,choices=set(["PM2","Ozone","PM2Avg","OzoneHigh"]))
-        cDateTime = db.DateTimeProperty()
-        cPM2p5Avg = db.FloatProperty()
-        cOzoneHigh= db.IntegerProperty()
-        cPM2p5_AQI_Quan = db.IntegerProperty()
-        cPM2p5_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
-        cOZONE_AQI_Quan = db.IntegerProperty()
-        cOZONE_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
+
+#def datastore_create():
+#    #CREATE the datastore
+#    class tReading(db.Model):
+#        ckID = db.IntegerProperty(required=True)
+#        cFeedType = db.StringProperty(required=True,choices=set(["PM2","Ozone","PM2Avg","OzoneHigh"]))
+#        cDateTime = db.DateTimeProperty()
+#        cPM2p5Avg = db.FloatProperty()
+#        cOzoneHigh= db.IntegerProperty()
+#        cPM2p5_AQI_Quan = db.IntegerProperty()
+#        cPM2p5_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
+#        cOZONE_AQI_Quan = db.IntegerProperty()
+#        cOZONE_AQI_Qual = db.StringProperty(required=False, choices=set(["Good","Moderate","Unhealthy for Sensitive Groups","Very Unhealthy","Hazardous"]))
 
 def aqi_definition(aqi):
     """Given an integer AQI, return the interpretation"""
@@ -74,18 +75,44 @@ def html_head():
     print '      // Set a callback to run when the Google Visualization API is loaded.'
     print '      google.setOnLoadCallback(drawChart);'
     
-def html_data_table(pm, o3):
+def html_data_table(pm, o3, dt):
     # populate data table
-    print '    </script'
-    pass
+    print "      function drawChart() {"
+    print "          var pm_data = new google.visualization.DataTable();"
+    print "          var o3_data = new google.visualization.DataTable();"
+    print "          pm_data.addColumn('datetime', 'Date/Time (local)');"
+    print "          pm_data.addColumn('number', 'PM2.5 (ppm)');"
+    print "          pm_data.addRows(["
+    for i in range(len(pm)):
+        print "              [new Date(%d, %d, %d, %d, %d, %d), %f]," % (dt[i].year, dt[i].month, dt[i].day, dt[i].hour, dt[i].minute, dt[i].second, pm[i]['concentration'])
+    print "          ]);"
+    print "          o3_data.addColumn('datetime', 'Date/Time (local)');"
+    print "          o3_data.addColumn('number', 'O3 (ppm)');"
+    print "          o3_data.addRows(["
+    for i in range(len(pm)):
+        print "              [new Date(%d, %d, %d, %d, %d, %d), %f]," % (dt[i].year, dt[i].month, dt[i].day, dt[i].hour, dt[i].minute, dt[i].second, o3[i]['concentration'])
+    print "          ]);"
+
+    print "          var options = { title: 'Beijing Air Quality', vAxis: {logScale: true}};"
+    print "          var pm_chart = new google.visualization.LineChart(document.getElementById('pm_chart_div'));"
+    print "          var o3_chart = new google.visualization.LineChart(document.getElementById('o3_chart_div'));"
+    print "          pm_chart.draw(pm_data, options);"
+    print "          o3_chart.draw(o3_data, options);"
+    print "      }"
+    print "    </script>"
 
 def html_body(pm, o3, dt):
     print '<body>'
-    print '<h4><a href="https://twitter.com/#!/BeijingAir">@BeijingAir</a> summary</h4>'
+    print '<h2><a href="https://twitter.com/#!/BeijingAir">@BeijingAir</a> Summary</h2>'
 
     (pm_max, pm_min, pm_mean) = crunch(pm)
     (o3_max, o3_min, o3_mean) = crunch(o3)
 
+    print '<div id="pm_chart_div" style="width: 900px; height: 500px;"></div>'
+    print '<p>&nbsp;</p>'
+    print '<div id="o3_chart_div" style="width: 900px; height: 500px;"></div>'
+
+    print '<h4>Summary statistics</h4>'
     print '<pre>'
     print 'Particulate matter (PM2.5) concentration (ppm):'
     print '    Mean: %.2f' % (pm_mean)
@@ -104,6 +131,11 @@ def html_body(pm, o3, dt):
     print '<pre>No. of data points: pm - ', len(pm), '; o3 - ', len(o3), '</pre>'
     # stream is most recent first
     print '<pre>From: ', dt[-1], 'to', dt[0], '</pre>'
+
+    #print '<pre>dt = ', dt
+    #print 'pm = ', pm
+    #print 'o3 = ', o3
+    #print '</pre>'
 
 def html_tail():
     print '</body></html>'
@@ -155,8 +187,8 @@ def main():
                 (d, t) = tweet[0].split(' ')
                 (month, day, year) = d.split('-')
                 (hr, mins) = t.split(':')
-                dt.append(datetime.datetime(int(year), int(month), int(day), int(hr), int(mins)))
                 if tweet[1].strip() == 'PM2.5':
+                    dt.append(datetime.datetime(int(year), int(month), int(day), int(hr), int(mins)))
                     pmraw = tweet[2]
                     aqiraw = tweet[3]
                     definitionraw = tweet[4]
@@ -196,7 +228,7 @@ def main():
     
 
     html_head()
-    html_data_table(pm, o3)
+    html_data_table(pm, o3, dt)
     html_body(pm, o3, dt)
 
     html_tail()
