@@ -1,9 +1,18 @@
 
+from __future__ import print_function
+
 import webbrowser
 import time
 
-from api import Twitter
-from oauth import OAuth, write_token_file
+from .api import Twitter
+from .oauth import OAuth, write_token_file
+
+try:
+    _input = raw_input
+except NameError:
+    _input = input
+
+
 
 def oauth_dance(app_name, consumer_key, consumer_secret, token_filename=None):
     """
@@ -12,25 +21,27 @@ def oauth_dance(app_name, consumer_key, consumer_secret, token_filename=None):
 
     Provide the name of your app in `app_name`, your consumer_key, and
     consumer_secret. This function will open a web browser to let the
-    user Allow your app to access their Twitter account. PIN
+    user allow your app to access their Twitter account. PIN
     authentication is used.
 
     If a token_filename is given, the oauth tokens will be written to
     the file.
     """
-    print ("Hi there! We're gonna get you all set up to use %s." % app_name)
+    print("Hi there! We're gonna get you all set up to use %s." % app_name)
     twitter = Twitter(
         auth=OAuth('', '', consumer_key, consumer_secret),
-        format='')
+        format='', api_version=None)
     oauth_token, oauth_token_secret = parse_oauth_tokens(
         twitter.oauth.request_token())
-    print """
+    print("""
 In the web browser window that opens please choose to Allow
 access. Copy the PIN number that appears on the next page and paste or
 type it here:
-"""
+""")
     oauth_url = ('http://api.twitter.com/oauth/authorize?oauth_token=' +
                  oauth_token)
+    print("Opening: %s\n" % oauth_url)
+
     try:
         r = webbrowser.open(oauth_url)
         time.sleep(2) # Sometimes the last command can print some
@@ -39,24 +50,24 @@ type it here:
         if not r:
             raise Exception()
     except:
-        print """
+        print("""
 Uh, I couldn't open a browser on your computer. Please go here to get
 your PIN:
 
-""" + oauth_url
-    oauth_verifier = raw_input("Please enter the PIN: ").strip()
+""" + oauth_url)
+    oauth_verifier = _input("Please enter the PIN: ").strip()
     twitter = Twitter(
         auth=OAuth(
             oauth_token, oauth_token_secret, consumer_key, consumer_secret),
-        format='')
+        format='', api_version=None)
     oauth_token, oauth_token_secret = parse_oauth_tokens(
         twitter.oauth.access_token(oauth_verifier=oauth_verifier))
     if token_filename:
         write_token_file(
             token_filename, oauth_token, oauth_token_secret)
-        print
-        print "That's it! Your authorization keys have been written to %s." % (
-            token_filename)
+        print()
+        print("That's it! Your authorization keys have been written to %s." % (
+            token_filename))
     return oauth_token, oauth_token_secret
 
 def parse_oauth_tokens(result):
