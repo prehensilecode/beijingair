@@ -25,6 +25,18 @@ import tweepy
 
 # XXX keys.txt to be inserted here
 
+
+# Go to http://dev.twitter.com and create an app. 
+# The consumer key and secret will be generated for you after
+consumer_key="w2eecV8eFoAnHFpr4buJA"
+consumer_secret="y96hd3WmBiWequGLLtgwVq3zPzNlbmx4gdzLADZIs"
+
+# After the step above, you will be redirected to your app's page.
+# Create an access token under the the "Your access token" section
+access_token="9114072-HF350O2gvAyaXsyzgZexBn1xKUPCn46iND91xMrrVs"
+access_token_secret="MLlgwrTIsMPFJh7WqHud5nSZfuR7vyAHHm8pP7InXk"
+
+
 debug_p = False
 
 #def datastore_create():
