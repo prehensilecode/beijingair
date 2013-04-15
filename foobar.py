@@ -3,6 +3,7 @@ import logging
 import cgi
 import sys
 import os
+import re
 import webapp2
 import datetime
 import wsgiref.handlers
@@ -12,7 +13,17 @@ from google.appengine.ext import db
 from google.appengine.ext.webapp import util
 
 # modules to be included with this app
-import twitter
+#import twitter
+
+sys.path.insert(0, 'oauth2.zip')
+sys.path.insert(0, 'httplib2.zip')
+sys.path.insert(0, 'tweepy.zip')
+
+import oauth2
+import httplib2
+import tweepy
+
+# XXX keys.txt to be inserted here
 
 debug_p = False
 
@@ -31,9 +42,11 @@ debug_p = False
 
 class Reading(db.Model):
     """Models an individual air quality reading of PM2.5 and O3 at a certain datetime"""
-    dt = db.DateTimeProperty(auto_now_add=False)
-    pm = db.FloatProperty()
-    o3 = db.FloatProperty()
+    dt    = db.DateTimeProperty(auto_now_add=False)
+    pm    = db.FloatProperty()
+    pmaqi = db.IntegerProperty()
+    o3    = db.FloatProperty()
+    o3aqi = db.IntegerProperty()
 
 # We'll only ever have one instance of the Beijingair
 def beijingair_key(beijingair_name=None):
@@ -189,6 +202,7 @@ class MainPage(webapp2.RequestHandler):
         bodyhead_str = """<body>
             <h2><a href="https://twitter.com/#!/BeijingAir">@BeijingAir</a> Summary</h2>"""
 
+        body_strings = []
         if (len(pm) > 0 and len(o3) > 0):
             body_strings =  ["""
             <div id="pm_chart_div" style="width: 900px; height: 500px;"></div>\n
@@ -235,8 +249,21 @@ class MainPage(webapp2.RequestHandler):
 
     def main(self):
         global debug_p
-        t = twitter.api.Twitter(auth=twitter.oauth.OAuth('', '', '', ''))
-        cur = t.statuses.user_timeline(screen_name="beijingair", include_rts=True)
+        ### verdone
+        #t = twitter.api.Twitter(auth=twitter.oauth.OAuth('', '', '', ''))
+        #cur = t.statuses.user_timeline(screen_name="beijingair", include_rts=True)
+
+        ### other python-twitter
+        #t = twitter.Api(consumer_key="w2eecV8eFoAnHFpr4buJA", consumer_secret="y96hd3WmBiWequGLLtgwVq3zPzNlbmx4gdzLADZIs", access_token_key="9114072-HF350O2gvAyaXsyzgZexBn1xKUPCn46iND91xMrrVs", access_token_secret="MLlgwrTIsMPFJh7WqHud5nSZfuR7vyAHHm8pP7InXk", cache=None)
+        #cur = t.statuses.user_timeline(screen_name="beijingair", include_rts=True)
+
+        ### tweepy
+        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+        api = tweepy.API(auth)
+        #bj = api.get_user(screen_name='beijingair')
+        cur = api.user_timeline(screen_name="beijingair", include_rts=True)
+        
 
         # There are 4 types of tweets:
         # - instantaneous PM2.5 values
@@ -249,10 +276,13 @@ class MainPage(webapp2.RequestHandler):
         # They look like, respectively:
         # - 03-04-2012 03:00; PM2.5; 113.0; 178; Unhealthy (at 24-hour exposure at this level)
         # - 03-03-2012 20:00; Ozone; 0.0; 0; Good (based on the higher of the current-hour and 8-hour readings)
-        # - 03-03-2012 00:00 to 03-03-2012 23:59; PM2.5 24hr avg; 93.1; 167; Unhealthy
-        # - 03-03-2012 00:00 to 03-03-2012 23:59;  Ozone 8hr high; 0.0; 0; Good
+        # - 03-03-2012 12:00 to 03-03-2012 11:59; PM2.5 24hr avg; 93.1; 167; Unhealthy
+        # - 03-03-2012 12:00 to 03-03-2012 11:59;  Ozone 8hr high; 0.0; 0; Good
         # If there are no data, we get:
         # - 03-03-2012 14:00; PM2.5; no data
+
+        # pattern which matches the date-time part of the 24-hr period average tweet.
+        avgpat = re.compile(r'^\d{2}-\d{2}-\d{4}\ \d{2}:\d{2}\ to\ \d{2}-\d{2}-\d{4}\ \d{2}:\d{2}')
 
         self.pm = []
         self.o3 = []
@@ -264,78 +294,51 @@ class MainPage(webapp2.RequestHandler):
         year = ''
         hr = ''
         mins = ''
+        q = Reading.all(keys_only=True)
         for s in cur:
-            #print s['text']
-            #print s['text'].split(';')
-            #print s['text'].split(';')[0].split(' ')
-            tweet = s['text'].split(';')
-            #print 'tweet = ', tweet
+            if len(s.text) > 3:
+                if not avgpat.match(s.text):
+                    datetime_field = s.text.split(';')[0]
+                    reading = s.text.split(';')[1:]
+                    # we only care about the instantaneous values
+                    pmraw = -1.
+                    o3raw = -1.
+                    pmaqiraw = 0
+                    o3aqiraw = 0
+                    if len(datetime_field) > 0:
+                        (d, t) = datetime_field.split(' ')
+                        (month, day, year) = d.split('-')
+                        (hr, mins) = t.split(':')
+                        cur_dt = datetime.datetime(int(year), int(month), int(day), int(hr), int(mins))
+                        self.dt.append(cur_dt)
+                        if reading[0].strip() == 'PM2.5':
+                            if reading[1].strip() != 'No Reading':
+                                pmraw = float(reading[1].strip())
+                                pmaqiraw = int(reading[2].strip())
+                                definitionraw = reading[3].strip()
+                                self.pm.append({'concentration': pmraw, 'aqi': pmaqiraw})
+                                if debug_p:
+                                    print 'date = ', d, '; time = ', t, '; pmraw = ', pmraw, '; aqiraw = ', \
+                                        aqiraw, '; definitionraw = ', definitionraw
+                        elif reading[0].strip() == 'Ozone':
+                            if reading[1].strip() != 'No Reading':
+                                o3raw = float(reading[1].strip())
+                                o3aqiraw = int(reading[2].strip())
+                                definitionraw = reading[3].strip()
+                                self.o3.append({'concentration': o3raw, 'aqi': o3aqiraw})
+                                if debug_p:
+                                    print 'date = ', d, '; time = ', t, '; o3raw = ', o3raw, '; aqiraw = ', \
+                                        aqiraw, '; definitionraw = ', definitionraw
 
-            #print 'len(tweet) = ', len(tweet)
-            datetime_field = tweet[0].split(' ')
-
-            if len(tweet) > 3:
-                # we only care about the instantaneous values
-                if len(datetime_field) == 2:
-                    (d, t) = tweet[0].split(' ')
-                    (month, day, year) = d.split('-')
-                    (hr, mins) = t.split(':')
-                    if tweet[1].strip() == 'PM2.5':
-                        self.dt.append(datetime.datetime(int(year), int(month), int(day), int(hr), int(mins)))
-                        pmraw = tweet[2]
-                        aqiraw = tweet[3]
-                        definitionraw = tweet[4]
-                        self.pm.append({'concentration': float(pmraw.strip()), 'aqi': int(aqiraw.strip())})
-                        if debug_p:
-                            print 'date = ', d, '; time = ', t, '; pmraw = ', pmraw, '; aqiraw = ', \
-                                aqiraw, '; definitionraw = ', definitionraw
-                    elif tweet[1].strip() == 'Ozone':
-                        o3raw = tweet[2]
-                        aqiraw = tweet[3]
-                        definitionraw = tweet[4]
-                        self.o3.append({'concentration': float(o3raw.strip()), 'aqi': int(aqiraw.strip())})
-                        if debug_p:
-                            print 'date = ', d, '; time = ', t, '; o3raw = ', o3raw, '; aqiraw = ', \
-                                aqiraw, '; definitionraw = ', definitionraw
-
-                    aqiraw = tweet[3]
-                    definitionraw = tweet[4]
-
-
-                # value for the entire "field" may be "no data" if there is no data
-                # available; e.g. 03-28-2011; 01:00; PM2.5; 40.0; 108; Unhealthy for Sensitive Groups // Ozone; no data
-                # can tell from the length
-                #if len(pmraw) == 1:
-                #    #print('No PM data point')
-                #    self.pm.append({'concentration': -1., 'aqi': -1, 'definition': 'n/a'})
-                #else:
-                #    self.pm.append({'concentration': float(pmraw[0]), 'aqi': int(pmraw[1]), 'definition': pmraw[2]})
-                #
-                #if len(o3raw) == 1:
-                #    #print('No O3 data point')
-                #    self.o3.append({'concentration': -1., 'aqi': -1, 'definition': 'n/a'})
-                #else:
-                #    self.o3.append({'concentration': float(o3raw[0]), 'aqi': int(o3raw[1]), 'definition': o3raw[2]})
-
-                #j.append(json.write(s))
-
-
-        #html_head()
-        #html_data_table(self.dt, self.pm, self.o3)
-        #html_body(self.dt, self.pm, self.o3)
-
-        #html_tail()
-
-
-        #for x in self.pm:
-        #    print aqi_definition(x['aqi'])
-
-        #for d in j:
-        #    print '\n'.join([d.rstrip() for l in d.splitlines()])
-
-        #print '<html><head><title>foo</title></head><body><pre>', self.pm, '</pre></body></html>'
-
-
+                        key_name = ' '.join(['reading', str(cur_dt)])
+                        q.filter("key_name =", key_name)
+                        result = q.get()
+                        if not result:
+                            r_data = Reading(key_name=key_name, dt=cur_dt, pm=pmraw, pmaqi=pmaqiraw, o3=o3raw, o3aqi=o3aqiraw)
+                            r_data.put()
+    
+    
+    
 
 class Beijingair(webapp2.RequestHandler):
     def post(self):

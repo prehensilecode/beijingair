@@ -11,3 +11,6 @@ handlers:
 - url: /.*
   script: foobar.app
 
+builtins:
+- appstats: on
+
